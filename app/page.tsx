@@ -141,7 +141,7 @@ A Ty? Co odkładasz "na później"?`;
         {
           method: 'POST',
           headers: {
-            'Authorization': 'Bearer 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',
+            'Authorization': 'Bearer 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',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
