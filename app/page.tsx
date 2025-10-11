@@ -134,13 +134,16 @@ A Ty? Co odkładasz "na później"?`;
 
   // ZAAWANSOWANA ANALIZA - NO API NEEDED!
   const analyzeAdvanced = (content: string) => {
+    console.log('🔬 START zaawansowanej analizy');
+    
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const words = content.split(/\s+/).filter(w => w.length > 0);
     
+    console.log('📝 Zdania:', sentences.length, 'Słowa:', words.length);
+    
     let aiScore = 0;
-    const details: any = {};
 
-    // 1. ENTROPIA TEKSTU - AI ma niższą entropię (bardziej przewidywalny)
+    // 1. ENTROPIA TEKSTU
     const wordFreq: { [key: string]: number } = {};
     words.forEach(word => {
       const w = word.toLowerCase();
@@ -150,63 +153,71 @@ A Ty? Co odkładasz "na później"?`;
     let entropy = 0;
     Object.values(wordFreq).forEach(freq => {
       const p = freq / words.length;
-      entropy -= p * Math.log2(p);
+      if (p > 0) {
+        entropy -= p * Math.log2(p);
+      }
     });
     
-    const normalizedEntropy = entropy / Math.log2(words.length);
-    details.entropy = normalizedEntropy.toFixed(3);
+    const maxEntropy = Math.log2(words.length);
+    const normalizedEntropy = maxEntropy > 0 ? entropy / maxEntropy : 0.5;
     
-    if (normalizedEntropy < 0.7) {
-      const entropyScore = Math.round((0.7 - normalizedEntropy) * 60);
+    console.log('🧮 Entropia:', normalizedEntropy.toFixed(3));
+    
+    if (normalizedEntropy < 0.7 && words.length > 30) {
+      const entropyScore = Math.round((0.7 - normalizedEntropy) * 40);
       aiScore += entropyScore;
+      console.log('  ➕ Entropia score:', entropyScore);
     }
 
-    // 2. LEXICAL DIVERSITY - AI używa bardziej ograniczonego słownictwa
+    // 2. LEXICAL DIVERSITY
     const uniqueWords = new Set(words.map(w => w.toLowerCase())).size;
-    const lexicalDiversity = uniqueWords / words.length;
-    details.lexicalDiversity = lexicalDiversity.toFixed(3);
+    const lexicalDiversity = words.length > 0 ? uniqueWords / words.length : 0.5;
+    
+    console.log('📚 Różnorodność:', lexicalDiversity.toFixed(3));
     
     if (lexicalDiversity < 0.5 && words.length > 50) {
       const diversityScore = Math.round((0.5 - lexicalDiversity) * 40);
       aiScore += diversityScore;
+      console.log('  ➕ Diversity score:', diversityScore);
     }
 
-    // 3. READABILITY - AI pisze "idealnie" czytelnie
-    const avgWordsPerSentence = words.length / sentences.length;
-    const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
+    // 3. READABILITY
+    const avgWordsPerSentence = sentences.length > 0 ? words.length / sentences.length : 10;
+    const avgWordLength = words.length > 0 ? words.reduce((sum, w) => sum + w.length, 0) / words.length : 5;
     
-    // Flesch Reading Ease (uproszczona wersja)
     const readabilityScore = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * (avgWordLength / 5));
-    details.readability = Math.round(readabilityScore);
     
-    // AI ma tendencję do 60-70 (idealne medium)
+    console.log('📖 Czytelność:', Math.round(readabilityScore));
+    
     if (readabilityScore > 55 && readabilityScore < 75 && words.length > 100) {
       aiScore += 12;
+      console.log('  ➕ Readability score: 12');
     }
 
-    // 4. TRANSITION WORDS - AI nadużywa słów przejściowych
+    // 4. TRANSITION WORDS
     const transitionWords = [
       'jednak', 'ponadto', 'niemniej', 'tym samym', 'w związku z tym',
-      'dlatego też', 'bowiem', 'albowiem', 'następnie', 'wskutek tego'
+      'dlatego też', 'bowiem', 'następnie'
     ];
     
     const transitionCount = transitionWords.filter(tw => 
       content.toLowerCase().includes(tw)
     ).length;
     
-    details.transitionWords = transitionCount;
+    console.log('🔄 Słowa przejściowe:', transitionCount);
     
-    if (transitionCount > 3) {
-      aiScore += Math.min(transitionCount * 5, 15);
+    if (transitionCount > 2) {
+      const transScore = Math.min(transitionCount * 5, 15);
+      aiScore += transScore;
+      console.log('  ➕ Transition score:', transScore);
     }
 
-    // 5. PERPLEXITY SIMULATION - jak przewidywalny jest kolejny wyraz
+    // 5. PERPLEXITY SIMULATION
     let perplexityScore = 0;
-    for (let i = 1; i < words.length; i++) {
+    for (let i = 1; i < Math.min(words.length, 100); i++) {
       const prevWord = words[i - 1].toLowerCase();
       const currWord = words[i].toLowerCase();
       
-      // Sprawdź czy to typowa para AI
       const aiPairs = [
         ['dzisiejszym', 'świecie'],
         ['kluczowe', 'znaczenie'],
@@ -216,44 +227,50 @@ A Ty? Co odkładasz "na później"?`;
       ];
       
       if (aiPairs.some(([a, b]) => prevWord.includes(a) && currWord.includes(b))) {
-        perplexityScore += 2;
+        perplexityScore += 3;
       }
     }
     
-    details.perplexity = 100 - Math.min(perplexityScore * 3, 60);
+    console.log('🎲 Perplexity score:', perplexityScore);
+    
     aiScore += Math.min(perplexityScore, 20);
 
-    // 6. SENTIMENT CONSISTENCY - AI ma bardzo stabilny sentiment
+    // 6. SENTIMENT CONSISTENCY
     const positiveWords = ['dobry', 'świetny', 'super', 'rewolucyjny', 'innowacyjny', 'efektywny'];
     const negativeWords = ['zły', 'problem', 'trudność', 'wyzwanie', 'bariera'];
     
     const posCount = positiveWords.filter(w => content.toLowerCase().includes(w)).length;
     const negCount = negativeWords.filter(w => content.toLowerCase().includes(w)).length;
     
-    // AI rzadko miesza bardzo pozytywne z negatywnymi
     if ((posCount > 2 && negCount === 0) || (negCount > 2 && posCount === 0)) {
       aiScore += 8;
+      console.log('  ➕ Sentiment consistency: 8');
     }
 
-    // 7. BŁĘDY I NIESPÓJNOŚCI - ludzie robią błędy!
-    const hasTypos = /\s{2,}/.test(content); // podwójne spacje
-    const hasCaseMistakes = /[a-ząćęłńóśźż][A-ZĄĆĘŁŃÓŚŹŻ]/.test(content); // błędne case
+    // 7. BRAK BŁĘDÓW
+    const hasTypos = /\s{2,}/.test(content);
+    const hasCaseMistakes = /[a-ząćęłńóśźż][A-ZĄĆĘŁŃÓŚŹŻ]/.test(content);
     
     if (!hasTypos && !hasCaseMistakes && words.length > 100) {
       aiScore += 10;
+      console.log('  ➕ Brak błędów: 10');
     }
 
     // Normalizacja
-    aiScore = Math.min(Math.max(aiScore, 0), 100);
+    aiScore = Math.min(Math.max(Math.round(aiScore), 0), 100);
+    
+    console.log('🎯 Final Advanced Score:', aiScore);
+
+    const perplexityDisplay = 100 - Math.min(perplexityScore * 2, 60);
 
     return {
-      score: Math.round(aiScore),
-      entropy: parseFloat(details.entropy),
-      lexicalDiversity: parseFloat(details.lexicalDiversity),
-      perplexity: details.perplexity,
-      readability: details.readability,
-      transitionWords: details.transitionWords,
-      burstiness: lexicalDiversity, // wyższa diversity = wyższa burstiness
+      score: aiScore,
+      entropy: parseFloat(normalizedEntropy.toFixed(2)),
+      lexicalDiversity: parseFloat(lexicalDiversity.toFixed(2)),
+      perplexity: perplexityDisplay,
+      readability: Math.round(readabilityScore),
+      transitionWords: transitionCount,
+      burstiness: parseFloat(lexicalDiversity.toFixed(2)),
       confidence: 88
     };
   };
