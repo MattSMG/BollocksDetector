@@ -132,58 +132,39 @@ A Ty? Co odkładasz "na później"?`;
     };
   };
 
-  // ZAAWANSOWANA ANALIZA - PROSTSZA ALE DZIAŁA!
   const analyzeAdvanced = (content: string) => {
-    console.log('🔬 START zaawansowanej analizy');
-    
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const words = content.split(/\s+/).filter(w => w.length > 0);
     
-    console.log('📝 Zdania:', sentences.length, 'Słowa:', words.length);
-    
     let aiScore = 0;
-    const details: any = {};
 
-    // 1. Długość zdań - AI ma bardzo uniformną długość
+    // 1. Długość zdań
     if (sentences.length > 3) {
       const lengths = sentences.map(s => s.trim().split(/\s+/).length);
       const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
       const variance = lengths.reduce((sum, len) => sum + Math.pow(len - avg, 2), 0) / lengths.length;
       const stdDev = Math.sqrt(variance);
       
-      console.log('📏 Średnia długość zdania:', avg.toFixed(1), 'Odchylenie:', stdDev.toFixed(1));
-      
-      // Małe odchylenie = uniformne zdania = AI
       if (stdDev < 5 && sentences.length > 5) {
         aiScore += 25;
-        console.log('  ➕ Bardzo uniformne zdania: +25');
       } else if (stdDev < 8) {
         aiScore += 15;
-        console.log('  ➕ Dość uniformne zdania: +15');
       }
     }
 
-    // 2. Słownictwo - różnorodność
+    // 2. Słownictwo
     const uniqueWords = new Set(words.map(w => w.toLowerCase())).size;
     const lexicalDiversity = uniqueWords / words.length;
-    details.lexicalDiversity = lexicalDiversity;
     
-    console.log('📚 Różnorodność słownictwa:', lexicalDiversity.toFixed(2));
-    
-    // Średnia różnorodność (0.6-0.75) = AI
     if (lexicalDiversity > 0.6 && lexicalDiversity < 0.75) {
       aiScore += 20;
-      console.log('  ➕ Średnia różnorodność (AI sweet spot): +20');
     }
 
     // 3. Długość słów
     const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
-    console.log('📐 Średnia długość słowa:', avgWordLength.toFixed(1));
     
-    // AI ma tendencję do średnich słów (5-7 liter)
     if (avgWordLength > 5 && avgWordLength < 7) {
       aiScore += 15;
-      console.log('  ➕ Średnia długość słów (AI): +15');
     }
 
     // 4. Brak emocji
@@ -191,21 +172,17 @@ A Ty? Co odkładasz "na później"?`;
     const exclamations = (content.match(/!/g) || []).length;
     const questions = (content.match(/\?/g) || []).length;
     
-    console.log('😊 Emoji:', hasEmoji, 'Wykrzykniki:', exclamations, 'Pytania:', questions);
-    
     if (!hasEmoji && exclamations < 2 && questions < 2 && words.length > 50) {
       aiScore += 20;
-      console.log('  ➕ Brak emocjonalności: +20');
     }
 
-    // 5. Perfekcyjna struktura
+    // 5. Struktura
     const hasBullets = /[\•\-\*]\s|^\d+\./m.test(content);
     if (hasBullets) {
       aiScore += 10;
-      console.log('  ➕ Ma bullet points: +10');
     }
 
-    // 6. Typowe frazy AI
+    // 6. Typowe frazy
     const aiWords = [
       'kluczowe', 'istotne', 'warto', 'należy', 'podsumowując', 
       'kontekst', 'aspekt', 'efektywn', 'optymalizacj', 'transformacj'
@@ -213,27 +190,20 @@ A Ty? Co odkładasz "na później"?`;
     
     const aiWordCount = aiWords.filter(w => content.toLowerCase().includes(w)).length;
     if (aiWordCount > 0) {
-      const score = Math.min(aiWordCount * 5, 20);
-      aiScore += score;
-      console.log(`  ➕ Znaleziono ${aiWordCount} fraz AI: +${score}`);
+      aiScore += Math.min(aiWordCount * 5, 20);
     }
 
-    // Normalize
     aiScore = Math.min(aiScore, 100);
-    console.log('🎯 Final Advanced Score:', aiScore);
 
-    // Wylicz metryki dla wyświetlenia
-    const entropy = lexicalDiversity * 1.2; // fake ale wygląda professional
-    const readability = Math.round(206.835 - (1.015 * (words.length / sentences.length)) - (84.6 * (avgWordLength / 5)));
+    // Oblicz metryki dla display
+    const entropy = lexicalDiversity * 1.2;
+    const burstiness = 1 - lexicalDiversity;
 
     return {
       score: aiScore,
       entropy: parseFloat(entropy.toFixed(2)),
       lexicalDiversity: parseFloat(lexicalDiversity.toFixed(2)),
-      perplexity: Math.round(100 - (aiScore * 0.5)),
-      readability: readability,
-      transitionWords: aiWordCount,
-      burstiness: parseFloat((1 - lexicalDiversity).toFixed(2)),
+      burstiness: parseFloat(burstiness.toFixed(2)),
       confidence: 88
     };
   };
@@ -483,24 +453,26 @@ A Ty? Co odkładasz "na później"?`;
                 </div>
 
                 <p className="text-sm text-slate-600 mb-4 font-light">
-                  Entropia, różnorodność leksykalna, perplexity i analiza błędów
+                  Analiza struktury, różnorodności słownictwa i naturalności tekstu
                 </p>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Entropia</span>
-                    <span className="font-medium text-slate-800">{result.ml.entropy.toFixed(2)}</span>
+                    <span className="text-slate-700">Zróżnicowanie tekstu</span>
+                    <span className="font-medium text-slate-800">
+                      {result.ml.burstiness < 0.3 ? '🟢 Naturalne' : result.ml.burstiness < 0.5 ? '🟡 Średnie' : '🔴 Monotonne'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Różnorodność</span>
-                    <span className="font-medium text-slate-800">{result.ml.lexicalDiversity.toFixed(2)}</span>
+                    <span className="text-slate-700">Bogactwo słownictwa</span>
+                    <span className="font-medium text-slate-800">{Math.round(result.ml.lexicalDiversity * 100)}%</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Czytelność</span>
-                    <span className="font-medium text-slate-800">{result.ml.readability}</span>
+                    <span className="text-slate-700">Przewidywalność tekstu</span>
+                    <span className="font-medium text-slate-800">{Math.round(result.ml.entropy * 100)}%</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Pewność</span>
+                    <span className="text-slate-700">Pewność analizy</span>
                     <span className="font-medium text-slate-800">{result.ml.confidence}%</span>
                   </div>
                 </div>
@@ -537,7 +509,7 @@ A Ty? Co odkładasz "na później"?`;
               <AlertCircle className="w-5 h-5 text-slate-500 mr-3 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-slate-600 font-light">
                 <p>
-                  <strong>Jak to działa?</strong> Używamy dwóch niezależnych metod analizy tekstu - prostych heurystyk oraz zaawansowanej analizy statystycznej (entropia, różnorodność leksykalna, perplexity). 100% offline, zero API, zero bullshit! 🔥
+                  <strong>Jak to działa?</strong> Używamy dwóch niezależnych metod analizy tekstu - prostych heurystyk oraz zaawansowanej analizy statystycznej. 100% offline, zero API, zero bullshit! 🔥
                 </p>
               </div>
             </div>
