@@ -106,7 +106,7 @@ A Ty? Co odkładasz "na później"?`;
       });
     }
 
-    const hasEmoji = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(content);
+    const hasEmoji = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/.test(content);
     const hasExclamations = (content.match(/!/g) || []).length;
     
     if (!hasEmoji && hasExclamations < 2 && words.length > 50) {
