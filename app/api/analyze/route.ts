@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          'Authorization': `Bearer ${process.env.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}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
