@@ -132,66 +132,130 @@ A Ty? Co odkładasz "na później"?`;
     };
   };
 
-  const analyzeML = async (content: string) => {
-  console.log('🚀 Wywołuję własne API');
-  
-  try {
-    const response = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text: content }),
+  // ZAAWANSOWANA ANALIZA - NO API NEEDED!
+  const analyzeAdvanced = (content: string) => {
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const words = content.split(/\s+/).filter(w => w.length > 0);
+    
+    let aiScore = 0;
+    const details: any = {};
+
+    // 1. ENTROPIA TEKSTU - AI ma niższą entropię (bardziej przewidywalny)
+    const wordFreq: { [key: string]: number } = {};
+    words.forEach(word => {
+      const w = word.toLowerCase();
+      wordFreq[w] = (wordFreq[w] || 0) + 1;
     });
-
-    const result = await response.json();
-    console.log('✅ Result:', result);
-      
-      let aiProbability = 0;
-      
-      if (Array.isArray(result) && result[0]) {
-        console.log('📦 Array result:', result[0]);
-        const aiLabel = result[0].find((item: any) => 
-          item.label.toLowerCase().includes('ai') || 
-          item.label.toLowerCase().includes('fake') ||
-          item.label.toLowerCase().includes('generated')
-        );
-        
-        if (aiLabel) {
-          console.log('🎯 Znaleziono AI label:', aiLabel);
-          aiProbability = aiLabel.score * 100;
-        } else {
-          console.log('⚠️ Nie znaleziono AI label, dostępne:', result[0].map((r: any) => r.label));
-        }
-      } else {
-        console.log('⚠️ Nieoczekiwany format wyniku:', result);
-      }
-      
-      const mlScore = Math.round(aiProbability);
-      console.log('🎯 Final ML Score:', mlScore);
-      
-      return {
-        score: mlScore,
-        perplexity: Math.round((100 - mlScore) * 0.8),
-        burstiness: (100 - mlScore) / 250,
-        confidence: 85
-      };
-    } catch (error) {
-      console.error('❌ Błąd API Hugging Face:', error);
-      const words = content.split(/\s+/).filter(w => w.length > 0);
-      const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
-      const vocabDiversity = new Set(words.map(w => w.toLowerCase())).size / words.length;
-      
-      const perplexity = Math.round((vocabDiversity * 80) + (avgWordLength * 5));
-      const mlScore = Math.max(0, Math.min(100, 100 - perplexity + 30));
-
-      return {
-        score: mlScore,
-        perplexity: perplexity,
-        burstiness: Math.random() * 0.4 + 0.3,
-        confidence: Math.round(75 + Math.random() * 20)
-      };
+    
+    let entropy = 0;
+    Object.values(wordFreq).forEach(freq => {
+      const p = freq / words.length;
+      entropy -= p * Math.log2(p);
+    });
+    
+    const normalizedEntropy = entropy / Math.log2(words.length);
+    details.entropy = normalizedEntropy.toFixed(3);
+    
+    if (normalizedEntropy < 0.7) {
+      const entropyScore = Math.round((0.7 - normalizedEntropy) * 60);
+      aiScore += entropyScore;
     }
+
+    // 2. LEXICAL DIVERSITY - AI używa bardziej ograniczonego słownictwa
+    const uniqueWords = new Set(words.map(w => w.toLowerCase())).size;
+    const lexicalDiversity = uniqueWords / words.length;
+    details.lexicalDiversity = lexicalDiversity.toFixed(3);
+    
+    if (lexicalDiversity < 0.5 && words.length > 50) {
+      const diversityScore = Math.round((0.5 - lexicalDiversity) * 40);
+      aiScore += diversityScore;
+    }
+
+    // 3. READABILITY - AI pisze "idealnie" czytelnie
+    const avgWordsPerSentence = words.length / sentences.length;
+    const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
+    
+    // Flesch Reading Ease (uproszczona wersja)
+    const readabilityScore = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * (avgWordLength / 5));
+    details.readability = Math.round(readabilityScore);
+    
+    // AI ma tendencję do 60-70 (idealne medium)
+    if (readabilityScore > 55 && readabilityScore < 75 && words.length > 100) {
+      aiScore += 12;
+    }
+
+    // 4. TRANSITION WORDS - AI nadużywa słów przejściowych
+    const transitionWords = [
+      'jednak', 'ponadto', 'niemniej', 'tym samym', 'w związku z tym',
+      'dlatego też', 'bowiem', 'albowiem', 'następnie', 'wskutek tego'
+    ];
+    
+    const transitionCount = transitionWords.filter(tw => 
+      content.toLowerCase().includes(tw)
+    ).length;
+    
+    details.transitionWords = transitionCount;
+    
+    if (transitionCount > 3) {
+      aiScore += Math.min(transitionCount * 5, 15);
+    }
+
+    // 5. PERPLEXITY SIMULATION - jak przewidywalny jest kolejny wyraz
+    let perplexityScore = 0;
+    for (let i = 1; i < words.length; i++) {
+      const prevWord = words[i - 1].toLowerCase();
+      const currWord = words[i].toLowerCase();
+      
+      // Sprawdź czy to typowa para AI
+      const aiPairs = [
+        ['dzisiejszym', 'świecie'],
+        ['kluczowe', 'znaczenie'],
+        ['nie', 'ulega'],
+        ['ulega', 'wątpliwości'],
+        ['należy', 'podkreślić']
+      ];
+      
+      if (aiPairs.some(([a, b]) => prevWord.includes(a) && currWord.includes(b))) {
+        perplexityScore += 2;
+      }
+    }
+    
+    details.perplexity = 100 - Math.min(perplexityScore * 3, 60);
+    aiScore += Math.min(perplexityScore, 20);
+
+    // 6. SENTIMENT CONSISTENCY - AI ma bardzo stabilny sentiment
+    const positiveWords = ['dobry', 'świetny', 'super', 'rewolucyjny', 'innowacyjny', 'efektywny'];
+    const negativeWords = ['zły', 'problem', 'trudność', 'wyzwanie', 'bariera'];
+    
+    const posCount = positiveWords.filter(w => content.toLowerCase().includes(w)).length;
+    const negCount = negativeWords.filter(w => content.toLowerCase().includes(w)).length;
+    
+    // AI rzadko miesza bardzo pozytywne z negatywnymi
+    if ((posCount > 2 && negCount === 0) || (negCount > 2 && posCount === 0)) {
+      aiScore += 8;
+    }
+
+    // 7. BŁĘDY I NIESPÓJNOŚCI - ludzie robią błędy!
+    const hasTypos = /\s{2,}/.test(content); // podwójne spacje
+    const hasCaseMistakes = /[a-ząćęłńóśźż][A-ZĄĆĘŁŃÓŚŹŻ]/.test(content); // błędne case
+    
+    if (!hasTypos && !hasCaseMistakes && words.length > 100) {
+      aiScore += 10;
+    }
+
+    // Normalizacja
+    aiScore = Math.min(Math.max(aiScore, 0), 100);
+
+    return {
+      score: Math.round(aiScore),
+      entropy: parseFloat(details.entropy),
+      lexicalDiversity: parseFloat(details.lexicalDiversity),
+      perplexity: details.perplexity,
+      readability: details.readability,
+      transitionWords: details.transitionWords,
+      burstiness: lexicalDiversity, // wyższa diversity = wyższa burstiness
+      confidence: 88
+    };
   };
 
   const handleAnalyze = async () => {
@@ -202,12 +266,12 @@ A Ty? Co odkładasz "na później"?`;
 
     setIsAnalyzing(true);
     
-    setTimeout(async () => {
+    setTimeout(() => {
       const heuristicResult = analyzeHeuristic(text);
-      const mlResult = await analyzeML(text);
+      const advancedResult = analyzeAdvanced(text);
       
-      const avgScore = Math.round((heuristicResult.score + mlResult.score) / 2);
-      const scoreDiff = Math.abs(heuristicResult.score - mlResult.score);
+      const avgScore = Math.round((heuristicResult.score + advancedResult.score) / 2);
+      const scoreDiff = Math.abs(heuristicResult.score - advancedResult.score);
       const agreement = scoreDiff < 20 ? 'high' : scoreDiff < 40 ? 'medium' : 'low';
       
       const verdict = avgScore > 70 ? 'Bardzo prawdopodobne AI' :
@@ -217,7 +281,7 @@ A Ty? Co odkładasz "na później"?`;
 
       setResult({
         heuristic: heuristicResult,
-        ml: mlResult,
+        ml: advancedResult,
         consensus: {
           score: avgScore,
           verdict: verdict,
@@ -419,7 +483,7 @@ A Ty? Co odkładasz "na później"?`;
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <Zap className="w-5 h-5 text-purple-600 mr-2" />
-                    <h3 className="text-lg font-medium text-slate-800">Model ML</h3>
+                    <h3 className="text-lg font-medium text-slate-800">Analiza zaawansowana</h3>
                   </div>
                   <div className={`text-3xl font-light ${getScoreColor(result.ml.score)}`}>
                     {result.ml.score}%
@@ -439,20 +503,24 @@ A Ty? Co odkładasz "na później"?`;
                 </div>
 
                 <p className="text-sm text-slate-600 mb-4 font-light">
-                  Model uczenia maszynowego trenowany na tysiącach tekstów AI vs ludzkich
+                  Entropia, różnorodność leksykalna, perplexity i analiza błędów
                 </p>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Perplexity</span>
-                    <span className="font-medium text-slate-800">{result.ml.perplexity}</span>
+                    <span className="text-slate-700">Entropia</span>
+                    <span className="font-medium text-slate-800">{result.ml.entropy.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Burstiness</span>
-                    <span className="font-medium text-slate-800">{result.ml.burstiness.toFixed(2)}</span>
+                    <span className="text-slate-700">Różnorodność</span>
+                    <span className="font-medium text-slate-800">{result.ml.lexicalDiversity.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-700">Pewność modelu</span>
+                    <span className="text-slate-700">Czytelność</span>
+                    <span className="font-medium text-slate-800">{result.ml.readability}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-700">Pewność</span>
                     <span className="font-medium text-slate-800">{result.ml.confidence}%</span>
                   </div>
                 </div>
@@ -489,7 +557,7 @@ A Ty? Co odkładasz "na później"?`;
               <AlertCircle className="w-5 h-5 text-slate-500 mr-3 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-slate-600 font-light">
                 <p>
-                  <strong>Jak to działa?</strong> Używamy dwóch niezależnych metod analizy tekstu - algorytmu wzorców językowych oraz modelu uczenia maszynowego z Hugging Face. Dzięki temu wynik jest bardziej wiarygodny.
+                  <strong>Jak to działa?</strong> Używamy dwóch niezależnych metod analizy tekstu - prostych heurystyk oraz zaawansowanej analizy statystycznej (entropia, różnorodność leksykalna, perplexity). 100% offline, zero API, zero bullshit! 🔥
                 </p>
               </div>
             </div>
