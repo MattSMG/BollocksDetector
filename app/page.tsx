@@ -163,10 +163,18 @@ A Ty? Co odkładasz "na później"?`;
     
     console.log('🧮 Entropia:', normalizedEntropy.toFixed(3));
     
-    if (normalizedEntropy < 0.7 && words.length > 30) {
-      const entropyScore = Math.round((0.7 - normalizedEntropy) * 40);
+    // Wysoka entropia (>0.85) = bardzo różnorodny tekst = potencjalnie AI próbujące być "kreatywne"
+    if (normalizedEntropy > 0.85 && words.length > 30) {
+      const entropyScore = Math.round((normalizedEntropy - 0.85) * 100);
       aiScore += entropyScore;
-      console.log('  ➕ Entropia score:', entropyScore);
+      console.log('  ➕ Wysoka entropia (sztuczna różnorodność):', entropyScore);
+    }
+    
+    // Niska entropia (<0.6) = monotonny, powtarzalny
+    if (normalizedEntropy < 0.6 && words.length > 30) {
+      const entropyScore = Math.round((0.6 - normalizedEntropy) * 50);
+      aiScore += entropyScore;
+      console.log('  ➕ Niska entropia (monotonny):', entropyScore);
     }
 
     // 2. LEXICAL DIVERSITY
@@ -175,10 +183,18 @@ A Ty? Co odkładasz "na później"?`;
     
     console.log('📚 Różnorodność:', lexicalDiversity.toFixed(3));
     
+    // Bardzo wysoka różnorodność (>0.8) może być sztuczna
+    if (lexicalDiversity > 0.8 && words.length > 50) {
+      const diversityScore = Math.round((lexicalDiversity - 0.8) * 80);
+      aiScore += diversityScore;
+      console.log('  ➕ Bardzo wysoka różnorodność (sztuczna):', diversityScore);
+    }
+    
+    // Niska różnorodność (<0.5) = ograniczone słownictwo
     if (lexicalDiversity < 0.5 && words.length > 50) {
       const diversityScore = Math.round((0.5 - lexicalDiversity) * 40);
       aiScore += diversityScore;
-      console.log('  ➕ Diversity score:', diversityScore);
+      console.log('  ➕ Niska różnorodność:', diversityScore);
     }
 
     // 3. READABILITY
@@ -189,9 +205,10 @@ A Ty? Co odkładasz "na później"?`;
     
     console.log('📖 Czytelność:', Math.round(readabilityScore));
     
-    if (readabilityScore > 55 && readabilityScore < 75 && words.length > 100) {
-      aiScore += 12;
-      console.log('  ➕ Readability score: 12');
+    // AI pisze w "idealnym" zakresie czytelności 60-80
+    if (readabilityScore > 60 && readabilityScore < 85 && words.length > 50) {
+      aiScore += 15;
+      console.log('  ➕ Idealna czytelność (AI sweet spot):', 15);
     }
 
     // 4. TRANSITION WORDS
