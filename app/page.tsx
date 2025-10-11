@@ -133,63 +133,49 @@ A Ty? Co odkładasz "na później"?`;
   };
 
   const analyzeML = async (content: string) => {
-  console.log('🚀 START: Wywołuję Hugging Face API');
-  
-  try {
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/Hello-SimpleAI/chatgpt-detector-roberta',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer TWOJ_TOKEN_TUTAJ',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: content,
-        }),
-      }
-    );
-
-    console.log('📊 Response status:', response.status);
-    const result = await response.json();
-    console.log('✅ HF Result:', result);
+    console.log('🚀 START: Wywołuję Hugging Face API');
     
-    let aiProbability = 0;
-    
-    if (Array.isArray(result) && result[0]) {
-      console.log('📦 Array result:', result[0]);
-      const aiLabel = result[0].find((item: any) => 
-        item.label.toLowerCase().includes('ai') || 
-        item.label.toLowerCase().includes('fake') ||
-        item.label.toLowerCase().includes('generated')
+    try {
+      const response = await fetch(
+        'https://api-inference.huggingface.co/models/Hello-SimpleAI/chatgpt-detector-roberta',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer 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',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: content,
+          }),
+        }
       );
+
+      console.log('📊 Response status:', response.status);
+      const result = await response.json();
+      console.log('✅ HF Result:', result);
       
-      if (aiLabel) {
-        console.log('🎯 Znaleziono AI label:', aiLabel);
-        aiProbability = aiLabel.score * 100;
+      let aiProbability = 0;
+      
+      if (Array.isArray(result) && result[0]) {
+        console.log('📦 Array result:', result[0]);
+        const aiLabel = result[0].find((item: any) => 
+          item.label.toLowerCase().includes('ai') || 
+          item.label.toLowerCase().includes('fake') ||
+          item.label.toLowerCase().includes('generated')
+        );
+        
+        if (aiLabel) {
+          console.log('🎯 Znaleziono AI label:', aiLabel);
+          aiProbability = aiLabel.score * 100;
+        } else {
+          console.log('⚠️ Nie znaleziono AI label, dostępne:', result[0].map((r: any) => r.label));
+        }
       } else {
-        console.log('⚠️ Nie znaleziono AI label, dostępne:', result[0].map((r: any) => r.label));
+        console.log('⚠️ Nieoczekiwany format wyniku:', result);
       }
-    } else {
-      console.log('⚠️ Nieoczekiwany format wyniku:', result);
-    }
-    
-    const mlScore = Math.round(aiProbability);
-    console.log('🎯 Final ML Score:', mlScore);
-    
-    return {
-      score: mlScore,
-      perplexity: Math.round((100 - mlScore) * 0.8),
-      burstiness: (100 - mlScore) / 250,
-      confidence: 85
-    };
-  } catch (error) {
-    console.error('❌ Błąd API Hugging Face:', error);
-    // fallback...
-  }
-};
       
       const mlScore = Math.round(aiProbability);
+      console.log('🎯 Final ML Score:', mlScore);
       
       return {
         score: mlScore,
@@ -198,7 +184,7 @@ A Ty? Co odkładasz "na później"?`;
         confidence: 85
       };
     } catch (error) {
-      console.error('Błąd API Hugging Face:', error);
+      console.error('❌ Błąd API Hugging Face:', error);
       const words = content.split(/\s+/).filter(w => w.length > 0);
       const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
       const vocabDiversity = new Set(words.map(w => w.toLowerCase())).size / words.length;
