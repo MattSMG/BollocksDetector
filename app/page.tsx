@@ -133,26 +133,19 @@ A Ty? Co odkładasz "na później"?`;
   };
 
   const analyzeML = async (content: string) => {
-    console.log('🚀 START: Wywołuję Hugging Face API');
-    
-    try {
-      const response = await fetch(
-        'https://api-inference.huggingface.co/models/Hello-SimpleAI/chatgpt-detector-roberta',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer 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',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputs: content,
-          }),
-        }
-      );
+  console.log('🚀 Wywołuję własne API');
+  
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: content }),
+    });
 
-      console.log('📊 Response status:', response.status);
-      const result = await response.json();
-      console.log('✅ HF Result:', result);
+    const result = await response.json();
+    console.log('✅ Result:', result);
       
       let aiProbability = 0;
       
