@@ -7,6 +7,8 @@ export default function Home() {
   const [text, setText] = useState('');
   const [result, setResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [useHistorical, setUseHistorical] = useState(false);
+  const [historicalPosts, setHistoricalPosts] = useState('');
 
   const exampleAI = `W dzisiejszym świecie sztuczna inteligencja odgrywa kluczowe znaczenie w transformacji cyfrowej organizacji. Nie ulega wątpliwości, że technologie AI rewolucjonizują sposób, w jaki prowadzimy biznes.
 
@@ -208,6 +210,83 @@ A Ty? Co odkładasz "na później"?`;
     };
   };
 
+  const analyzeHistorical = (currentText: string, oldPosts: string) => {
+    const oldPostsArray = oldPosts.split(/\n\n+/).filter(p => p.trim().length > 50);
+    
+    if (oldPostsArray.length === 0) {
+      return null;
+    }
+
+    // Analiza obecnego tekstu
+    const currentWords = currentText.split(/\s+/).filter(w => w.length > 0);
+    const currentSentences = currentText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const currentAvgSentenceLength = currentWords.length / currentSentences.length;
+    const currentHasEmoji = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/.test(currentText);
+    const currentExclamations = (currentText.match(/!/g) || []).length;
+    
+    // Analiza starych postów
+    let oldTotalWords = 0;
+    let oldTotalSentences = 0;
+    let oldTotalEmoji = 0;
+    let oldTotalExclamations = 0;
+
+    oldPostsArray.forEach(post => {
+      const words = post.split(/\s+/).filter(w => w.length > 0);
+      const sentences = post.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      oldTotalWords += words.length;
+      oldTotalSentences += sentences.length;
+      if (/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/.test(post)) oldTotalEmoji++;
+      oldTotalExclamations += (post.match(/!/g) || []).length;
+    });
+
+    const oldAvgSentenceLength = oldTotalWords / oldTotalSentences;
+    const oldHadEmoji = oldTotalEmoji > 0;
+    const oldAvgExclamations = oldTotalExclamations / oldPostsArray.length;
+
+    // Porównanie
+    const sentenceLengthDiff = Math.abs(currentAvgSentenceLength - oldAvgSentenceLength);
+    const emojiChanged = oldHadEmoji && !currentHasEmoji;
+    const exclamationsDiff = Math.abs((currentExclamations / currentSentences.length) - oldAvgExclamations);
+
+    let changeScore = 0;
+    const changes: string[] = [];
+
+    if (sentenceLengthDiff > 5) {
+      changeScore += 30;
+      changes.push(`Długość zdań zmieniła się z ${oldAvgSentenceLength.toFixed(1)} do ${currentAvgSentenceLength.toFixed(1)} słów`);
+    }
+
+    if (emojiChanged) {
+      changeScore += 25;
+      changes.push('Przestał używać emoji i emotikonów');
+    }
+
+    if (exclamationsDiff > 0.5) {
+      changeScore += 20;
+      changes.push('Drastyczna zmiana w użyciu wykrzykników');
+    }
+
+    if (currentAvgSentenceLength > 15 && oldAvgSentenceLength < 12) {
+      changeScore += 25;
+      changes.push('Zdania stały się znacznie bardziej skomplikowane');
+    }
+
+    return {
+      score: Math.min(changeScore, 100),
+      changes: changes,
+      oldStyle: {
+        avgSentenceLength: oldAvgSentenceLength.toFixed(1),
+        hadEmoji: oldHadEmoji,
+        avgExclamations: oldAvgExclamations.toFixed(1)
+      },
+      newStyle: {
+        avgSentenceLength: currentAvgSentenceLength.toFixed(1),
+        hasEmoji: currentHasEmoji,
+        exclamations: (currentExclamations / currentSentences.length).toFixed(1)
+      }
+    };
+  };
+
   const handleAnalyze = async () => {
     if (text.trim().length < 50) {
       alert('Wklej dłuższy tekst (minimum 50 znaków)');
@@ -219,6 +298,12 @@ A Ty? Co odkładasz "na później"?`;
     setTimeout(() => {
       const heuristicResult = analyzeHeuristic(text);
       const advancedResult = analyzeAdvanced(text);
+      
+      // Historical analysis jeśli włączone
+      let historicalResult = null;
+      if (useHistorical && historicalPosts.trim().length > 50) {
+        historicalResult = analyzeHistorical(text, historicalPosts);
+      }
       
       const avgScore = Math.round((heuristicResult.score + advancedResult.score) / 2);
       const scoreDiff = Math.abs(heuristicResult.score - advancedResult.score);
@@ -232,6 +317,7 @@ A Ty? Co odkładasz "na później"?`;
       setResult({
         heuristic: heuristicResult,
         ml: advancedResult,
+        historical: historicalResult,
         consensus: {
           score: avgScore,
           verdict: verdict,
@@ -310,6 +396,16 @@ A Ty? Co odkładasz "na później"?`;
             >
               👤 Przykład ludzki
             </button>
+            <button
+              onClick={() => {
+                setText('');
+                setHistoricalPosts('');
+                setResult(null);
+              }}
+              className="px-4 py-2 border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-light"
+            >
+              🗑️ Wyczyść
+            </button>
           </div>
 
           <textarea
@@ -318,6 +414,42 @@ A Ty? Co odkładasz "na później"?`;
             placeholder="Wklej tutaj tekst do analizy..."
             className="w-full h-48 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-none text-slate-700 font-light"
           />
+          
+          {/* Historical Analysis Toggle */}
+          <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useHistorical}
+                onChange={(e) => setUseHistorical(e.target.checked)}
+                className="w-4 h-4 text-slate-800 rounded focus:ring-slate-400"
+              />
+              <span className="ml-3 text-sm font-medium text-slate-700">
+                📊 Porównaj ze starymi postami (opcjonalne)
+              </span>
+            </label>
+            <p className="text-xs text-slate-500 mt-2 ml-7">
+              Wklej 2-5 starych postów tej osoby sprzed 2023 - sprawdzimy czy styl się zmienił!
+            </p>
+          </div>
+
+          {useHistorical && (
+            <div className="mt-4 animate-fade-in">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Stare posty (po jednym na linię, oddziel pustą linią)
+              </label>
+              <textarea
+                value={historicalPosts}
+                onChange={(e) => setHistoricalPosts(e.target.value)}
+                placeholder="Post 1 z 2021...
+
+Post 2 z 2022...
+
+Post 3 z 2022..."
+                className="w-full h-32 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-none text-slate-700 font-light text-sm"
+              />
+            </div>
+          )}
           
           <button
             onClick={handleAnalyze}
