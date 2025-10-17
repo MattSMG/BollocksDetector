@@ -3,10 +3,27 @@
 import React, { useState } from 'react';
 import { AlertCircle, Sparkles, TrendingUp, Shield } from 'lucide-react';
 
+interface AnalysisResult {
+  combined_score: number;
+  perplexity: {
+    score: number;
+    perplexity: number;
+    mean_logprob: number;
+    entropy: number;
+    rank_histogram: Record<string, number>;
+  };
+  binoculars: {
+    score: number;
+    perplexity_a: number;
+    perplexity_b: number;
+    ratio: number;
+  };
+}
+
 export default function BollocksDetector() {
   const [text, setText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState('');
 
   const analyzeText = async () => {
@@ -19,7 +36,7 @@ export default function BollocksDetector() {
     setError('');
     
     try {
-      const response = await fetch('https://your-ml-backend.railway.app/analyze', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, language: 'pl' })
