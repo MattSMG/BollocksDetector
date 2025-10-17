@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { AlertCircle, Sparkles, TrendingUp, Shield } from 'lucide-react';
 
