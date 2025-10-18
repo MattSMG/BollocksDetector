@@ -85,13 +85,26 @@ export default function BollocksDetector() {
           {/* Description */}
           <div className="mb-8">
             <h2 className="text-xl font-light mb-3">Jak to działa?</h2>
-            <p className="text-purple-200 text-sm leading-relaxed">
+            <p className="text-purple-200 text-sm leading-relaxed mb-4">
               Chcesz sprawdzić czy Twój „ulubiony" twórca na LinkedIn naprawdę chce przekazać 
               coś wartościowego czy tylko wrzuca generyczne teksty z AI?
-              <br />
-              <span className="text-purple-300 font-medium">
-                Wklej 2-5 starych postów tej osoby sprzed 2023 - sprawdzimy czy styl się zmienił!
-              </span>
+            </p>
+            
+            {/* Disclaimer */}
+            <div className="p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-yellow-100">
+                <strong className="font-medium">Narzędzie w fazie testów:</strong> Wyniki mogą zawierać błędy (false positive/negative). 
+                Traktuj rezultaty jako wskazówkę, nie ostateczny wyrok.
+              </div>
+            </div>
+          </div>
+
+          {/* Feature hint */}
+          <div className="mb-6 p-4 bg-purple-500/10 border border-purple-400/20 rounded-xl">
+            <p className="text-sm text-purple-200">
+              💡 <strong className="text-purple-100">Wskazówka:</strong> Wklej 2-5 starych postów tej osoby sprzed 2023 - 
+              sprawdzimy czy styl się zmienił!
             </p>
           </div>
 
